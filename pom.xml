@@ -4,7 +4,7 @@
   <groupId>com.felixdevelopment.db</groupId>
   <artifactId>felix-db-migration-tool</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>0.1-SNAPSHOT</version>
   <name>felix-db-migration-tool</name>
   <url>http://maven.apache.org</url>
   <properties>
