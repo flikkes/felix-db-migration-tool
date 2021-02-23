@@ -10,6 +10,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import com.mongodb.MongoNamespace;
+import com.mongodb.client.MongoCollection;
+
 public class EntityConverter {
     private final String entityName;
     private final Map<String, Class<?>> fieldNameAndType;
@@ -120,7 +123,40 @@ public class EntityConverter {
     }
 
     public void saveMongoDBEntities(final MongoTemplate template) {
-        template.insert(this.getMongoDBEntities(), this.entityName);
+        this.saveMongoDBEntities(template, MigrationStrategy.RENAME_OLD);
+    }
+
+    public void saveMongoDBEntities(final MongoTemplate template, MigrationStrategy migrationStrategy) {
+        switch (migrationStrategy) {
+        case REPLACE:
+            template.dropCollection(this.entityName);
+            template.insert(this.getMongoDBEntities(), this.entityName);
+            break;
+        case MERGE:
+            template.insert(this.getMongoDBEntities(), this.entityName);
+            break;
+        case RENAME_OLD:
+            final MongoCollection<Document> collection1 = template.getCollection(this.entityName);
+            if (collection1.countDocuments() > 0) {
+                collection1.renameCollection(new MongoNamespace(template.getDb().getName(),
+                        this.entityName + "_OLD_" + System.currentTimeMillis()));
+                template.insert(this.getMongoDBEntities(), this.entityName);
+            } else {
+                template.insert(this.getMongoDBEntities(), this.entityName);
+            }
+            break;
+        case RENAME_NEW:
+            final MongoCollection<Document> collection2 = template.getCollection(this.entityName);
+            if (collection2.countDocuments() > 0) {
+                template.insert(this.getMongoDBEntities(), this.entityName + "_NEW_" + System.currentTimeMillis());
+            } else {
+                template.insert(this.getMongoDBEntities(), this.entityName);
+            }
+            break;
+        default:
+            this.saveMongoDBEntities(template, MigrationStrategy.RENAME_OLD);
+            break;
+        }
     }
 
     public String createSQLQuery() {
